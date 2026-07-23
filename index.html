@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Badkamer intake</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F4F6F7; --surface:#FFFFFF; --ink:#17242B; --muted:#5F7078;
+    --line:#DDE4E7; --accent:#0F6E6B; --accent-ink:#0B5350; --accent-soft:#E7F1F0;
+    --danger:#B23A3A; --radius:14px;
+    --shadow:0 1px 2px rgba(23,36,43,.04), 0 8px 24px rgba(23,36,43,.05);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--font); color:var(--ink); background:var(--bg);
+    -webkit-font-smoothing:antialiased; font-size:16px; line-height:1.5;
+    padding-bottom:96px;
+  }
+  /* Header */
+  header{
+    position:sticky; top:0; z-index:50; background:rgba(244,246,247,.86);
+    backdrop-filter:saturate(140%) blur(10px); border-bottom:1px solid var(--line);
+  }
+  .head-inner{
+    max-width:900px; margin:0 auto; padding:12px 20px;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .brand{display:flex; flex-direction:column; margin-right:auto}
+  .brand .name{font-weight:680; letter-spacing:-.01em; font-size:18px}
+  .brand .sub{font-size:12px; color:var(--muted); letter-spacing:.02em}
+  .status{font-size:12px; color:var(--muted); min-width:120px; text-align:right}
+  .status.warn{color:var(--danger)}
+  .btn{
+    font-family:inherit; font-size:14px; font-weight:600; cursor:pointer;
+    border-radius:10px; padding:10px 16px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); min-height:44px;
+    transition:transform .04s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+  .btn.primary:hover{background:var(--accent-ink)}
+  .btn.ghost:hover{border-color:var(--accent); color:var(--accent-ink)}
+  /* Layout */
+  main{max-width:900px; margin:0 auto; padding:22px 20px}
+  .card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); margin-bottom:16px; overflow:hidden;
+  }
+  .card-head{
+    width:100%; text-align:left; background:none; border:0; cursor:pointer;
+    padding:18px 20px; display:flex; align-items:center; gap:14px; font-family:inherit;
+  }
+  .card-head .eyebrow{
+    font-size:11px; font-weight:700; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--accent); background:var(--accent-soft); padding:5px 9px; border-radius:6px;
+    white-space:nowrap;
+  }
+  .card-head h2{margin:0; font-size:17px; font-weight:640; letter-spacing:-.01em}
+  .card-head .chev{margin-left:auto; color:var(--muted); transition:transform .2s ease}
+  .card.collapsed .chev{transform:rotate(-90deg)}
+  .card-body{padding:4px 20px 22px}
+  .card.collapsed .card-body{display:none}
+  /* Fields */
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .grid.one{grid-template-columns:1fr}
+  @media(max-width:640px){ .grid{grid-template-columns:1fr} }
+  .field{display:flex; flex-direction:column; gap:6px}
+  .field.full{grid-column:1/-1}
+  label{font-size:13px; font-weight:600; color:var(--muted)}
+  input[type=text],input[type=tel],input[type=email],input[type=number],input[type=date],select,textarea{
+    font-family:inherit; font-size:16px; color:var(--ink); background:var(--surface);
+    border:1px solid var(--line); border-radius:10px; padding:12px 13px; width:100%;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  textarea{resize:vertical; min-height:84px; line-height:1.45}
+  input:focus,select:focus,textarea:focus{
+    outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  .hint{font-size:12px; color:var(--muted); margin-top:-2px}
+  .dims{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
+  @media(max-width:640px){ .dims{grid-template-columns:1fr 1fr} }
+  /* Product rows */
+  .product{border:1px solid var(--line); border-radius:12px; margin-bottom:12px; overflow:hidden}
+  .product-head{display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer}
+  .product-head .p-name{font-weight:600; font-size:15px}
+  .product-head .dot{width:9px; height:9px; border-radius:50%; background:var(--line); flex:none}
+  .product.on .dot{background:var(--accent)}
+  .product-body{padding:2px 16px 16px; border-top:1px solid var(--line); display:none}
+  .product.on .product-body{display:block}
+  /* Toggle */
+  .switch{margin-left:auto; position:relative; display:inline-flex; align-items:center}
+  .switch input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer}
+  .switch .track{width:46px; height:28px; border-radius:99px; background:var(--line); transition:background .18s ease; position:relative; flex:none}
+  .switch .thumb{position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:left .18s ease}
+  .switch input:checked + .track{background:var(--accent)}
+  .switch input:checked + .track .thumb{left:21px}
+  .switch .lbl{font-size:13px; color:var(--muted); margin-right:10px; font-weight:600}
+  /* Photos */
+  .photos{margin-top:12px}
+  .photo-grid{display:flex; flex-wrap:wrap; gap:10px; margin-top:10px}
+  .thumb{position:relative; width:96px; height:96px; border-radius:10px; overflow:hidden; border:1px solid var(--line)}
+  .thumb img{width:100%; height:100%; object-fit:cover; display:block}
+  .thumb button{position:absolute; top:4px; right:4px; width:24px; height:24px; border-radius:50%;
+    border:0; background:rgba(23,36,43,.72); color:#fff; font-size:15px; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center}
+  .add-photo{
+    display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:600;
+    color:var(--accent-ink); background:var(--accent-soft); border:1px dashed var(--accent);
+    border-radius:10px; padding:11px 14px; cursor:pointer; min-height:44px;
+  }
+  .add-photo input{display:none}
+  /* Segmented (Ja/Nee etc) */
+  .seg{display:inline-flex; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface)}
+  .seg label{cursor:pointer; padding:11px 20px; font-size:14px; font-weight:600; color:var(--muted); border-right:1px solid var(--line)}
+  .seg label:last-child{border-right:0}
+  .seg input{display:none}
+  .seg input:checked + span{color:#fff}
+  .seg label:has(input:checked){background:var(--accent)}
+  .seg span{display:block}
+  .block-title{font-size:14px; font-weight:700; letter-spacing:.02em; color:var(--ink); margin:22px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line)}
+  .block-title:first-child{margin-top:6px}
+  /* dynamic add button */
+  .add-row{
+    width:100%; border:1px dashed var(--line); background:var(--surface); color:var(--accent-ink);
+    border-radius:12px; padding:14px; font-family:inherit; font-size:14px; font-weight:600;
+    cursor:pointer; margin-top:4px; min-height:48px;
+  }
+  .add-row:hover{border-color:var(--accent)}
+  .removable{position:relative}
+  .removable .rm{position:absolute; top:12px; right:12px; background:none; border:0; color:var(--danger); font-size:13px; font-weight:600; cursor:pointer}
+  /* checklist */
+  .check{display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--line)}
+  .check:last-child{border-bottom:0}
+  .check input{width:22px; height:22px; accent-color:var(--accent); flex:none}
+  .check label{font-size:15px; color:var(--ink); font-weight:500}
+  /* montage hidden state */
+  #montageBody[hidden]{display:none}
+  .logo-row{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+  .logo-prev{height:44px; max-width:160px; object-fit:contain; border:1px solid var(--line); border-radius:8px; padding:4px; background:#fff}
+  /* bottom bar mobile */
+  .bottombar{position:fixed; bottom:0; left:0; right:0; background:rgba(244,246,247,.92);
+    backdrop-filter:blur(8px); border-top:1px solid var(--line); padding:12px 20px; display:none; z-index:40}
+  .bottombar .inner{max-width:900px; margin:0 auto; display:flex; gap:12px}
+  .bottombar .btn{flex:1}
+  @media(max-width:640px){ .bottombar{display:block} .head-actions .pdf-btn{display:none} }
+  .footer-note{text-align:center; color:var(--muted); font-size:12px; padding:8px 0 4px}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-inner">
+    <div class="brand">
+      <span class="name">Badkamer intake</span>
+      <span class="sub">Showroom · adviesgesprek</span>
+    </div>
+    <div class="status" id="status">Automatisch opslaan aan</div>
+    <div class="head-actions" style="display:flex; gap:10px">
+      <button class="btn ghost" id="newBtn">Nieuwe klant</button>
+      <button class="btn ghost pdf-btn" id="pdfBtn">PDF</button>
+      <button class="btn primary pdf-btn" id="sendBtn">Versturen</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- 1. Klantgegevens -->
+  <section class="card" data-section>
+    <button class="card-head" type="button"><span class="eyebrow">01</span><h2>Klantgegevens</h2><span class="chev">▾</span></button>
+    <div class="card-body">
+      <div class="grid">
+        <div class="field"><label>Naam klant</label><input type="text" data-save id="k_naam"></div>
+        <div class="field"><label>Telefoonnummer</label><input type="tel" data-save id="k_tel"></div>
+        <div class="field"><label>E-mail</label><input type="email" data-save id="k_email"></div>
+        <div class="field"><label>Adres</label><input type="text" data-save id="k_adres"></div>
+        <div class="field"><label>Postcode</label><input type="text" data-save id="k_postcode"></div>
+        <div class="field"><label>Woonplaats</label><input type="text" data-save id="k_plaats"></div>
+        <div class="field"><label>Datum intake</label><input type="date" data-save id="k_datum"></div>
+        <div class="field"><label>Naam verkoper</label><input type="text" data-save id="k_verkoper"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Badkamergegevens -->
+  <section class="card" data-section>
+    <button class="card-head" type="button"><span class="eyebrow">02</span><h2>Badkamergegevens</h2><span class="chev">▾</span></button>
+    <div class="card-body">
+      <label style="margin-bottom:8px; display:block">Afmetingen (cm)</label>
+      <div class="dims">
+        <div class="field"><label>Lengte</label><input type="number" inputmode="decimal" data-save id="b_lengte"></div>
+        <div class="field"><label>Breedte</label><input type="number" inputmode="decimal" data-save id="b_breedte"></div>
+        <div class="field"><label>Hoogte</label><input type="number" inputmode="decimal" data-save id="b_hoogte"></div>
+      </div>
+      <div class="grid one" style="margin-top:14px">
+        <div class="field full"><label>Huidige situatie</label><textarea data-save id="b_huidig"></textarea></div>
+        <div class="field full"><label>Wensen klant</label><textarea data-save id="b_wensen"></textarea></div>
+        <div class="field full"><label>Bijzonderheden</label><textarea data-save id="b_bijzonder"></textarea></div>
+      </div>
+      <div class="photos" data-photos="badkamer">
+        <label>Foto's huidige badkamer</label>
+        <div class="photo-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Productkeuzes -->
+  <section class="card" data-section>
+    <button class="card-head" type="button"><span class="eyebrow">03</span><h2>Productkeuzes</h2><span class="chev">▾</span></button>
+    <div class="card-body">
+      <p class="hint" style="margin-top:0">Zet een onderdeel aan als het besproken is. Alleen wat aanstaat komt in de PDF.</p>
+      <div id="productList"></div>
+
+      <div class="block-title">Accessoires</div>
+      <div id="accList"></div>
+      <button class="add-row" id="addAcc" type="button">+ Accessoire toevoegen</button>
+
+      <div class="block-title">Extra onderdeel</div>
+      <p class="hint" style="margin-top:-6px">Voor keuzes buiten de vaste lijst (sauna, stoomcabine, nis, maatwerkkast…).</p>
+      <div id="extraList"></div>
+      <button class="add-row" id="addExtra" type="button">+ Extra onderdeel toevoegen</button>
+    </div>
+  </section>
+
+  <!-- 4. Montage -->
+  <section class="card" data-section>
+    <button class="card-head" type="button"><span class="eyebrow">04</span><h2>Montage</h2><span class="chev">▾</span></button>
+    <div class="card-body">
+      <label style="display:block; margin-bottom:10px">Montage door onze winkel?</label>
+      <div class="seg" id="montageSeg">
+        <label><input type="radio" name="montage" value="ja" data-save id="m_ja"><span>Ja</span></label>
+        <label><input type="radio" name="montage" value="nee" data-save id="m_nee"><span>Nee</span></label>
+      </div>
+
+      <div id="montageBody" hidden>
+        <div class="block-title">Woninggegevens</div>
+        <div class="grid">
+          <div class="field"><label>Bouwjaar woning</label><input type="number" inputmode="numeric" data-save id="m_bouwjaar"></div>
+          <div class="field"><label>Bouw</label>
+            <select data-save id="m_bouwtype"><option value=""></option><option>Nieuwbouw</option><option>Bestaande bouw</option></select>
+          </div>
+          <div class="field full"><label>Type woning</label>
+            <select data-save id="m_woningtype"><option value=""></option><option>Appartement</option><option>Tussenwoning</option><option>Hoekwoning</option><option>Vrijstaande woning</option><option>Anders</option></select>
+          </div>
+        </div>
+
+        <div class="block-title">Bereikbaarheid</div>
+        <div class="grid">
+          <div class="field"><label>Welke etage?</label><input type="text" data-save id="m_etage"></div>
+          <div class="field"><label>Lift aanwezig</label>
+            <select data-save id="m_lift"><option value=""></option><option>Ja</option><option>Nee</option></select>
+          </div>
+          <div class="field full"><label>Bijzonderheden bereikbaarheid</label><textarea data-save id="m_bereik_opm"></textarea></div>
+        </div>
+
+        <div class="block-title">Bestaande badkamer</div>
+        <div class="grid">
+          <div class="field"><label>Wordt bestaande badkamer verwijderd?</label>
+            <select data-save id="m_verwijderd"><option value=""></option><option>Ja</option><option>Nee</option></select>
+          </div>
+          <div class="field"><label>Wie verzorgt de sloop?</label>
+            <select data-save id="m_sloop"><option value=""></option><option>Klant</option><option>Onze montageploeg</option><option>Anders</option></select>
+          </div>
+        </div>
+
+        <div class="block-title">Technische gegevens</div>
+        <div class="grid">
+          <div class="field"><label>Type wanden</label>
+            <select data-save id="m_wanden"><option value=""></option><option>Beton</option><option>Kalkzandsteen</option><option>Gipsblokken</option><option>Metal stud</option><option>Tegel op tegel</option><option>Onbekend</option></select>
+          </div>
+          <div class="field"><label>Type vloer</label>
+            <select data-save id="m_vloer"><option value=""></option><option>Beton</option><option>Hout</option><option>Tegelvloer</option><option>Anders</option><option>Onbekend</option></select>
+          </div>
+          <div class="field full"><label>Opmerkingen wanden / vloer</label><textarea data-save id="m_tech_opm"></textarea></div>
+        </div>
+
+        <div class="block-title">Randafwerking</div>
+        <div class="grid">
+          <div class="field"><label>Type</label>
+            <select data-save id="m_rand_type"><option value=""></option><option>Tegelprofiel</option><option>Kitrand</option><option>Hoekprofiel</option><option>Anders</option></select>
+          </div>
+          <div class="field"><label>Kleur / materiaal</label><input type="text" data-save id="m_rand_kleur"></div>
+          <div class="field full"><label>Opmerkingen randafwerking</label><textarea data-save id="m_rand_opm"></textarea></div>
+        </div>
+
+        <div class="block-title">Installatie</div>
+        <div class="grid">
+          <div class="field"><label>Bestaande aansluitingen geschikt?</label>
+            <select data-save id="m_aansluiting"><option value=""></option><option>Ja</option><option>Nee</option><option>Onbekend</option></select>
+          </div>
+          <div class="field"><label>Leidingaanpassingen nodig?</label>
+            <select data-save id="m_leiding"><option value=""></option><option>Ja</option><option>Nee</option></select>
+          </div>
+          <div class="field full"><label>Extra opmerkingen installatie</label><textarea data-save id="m_inst_opm"></textarea></div>
+        </div>
+
+        <div class="photos" data-photos="montage" style="margin-top:18px">
+          <label>Montagefoto's (leidingen, afvoer, meterkast, moeilijke situaties)</label>
+          <div class="photo-grid"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Algemene klantwensen -->
+  <section class="card" data-section>
+    <button class="card-head" type="button"><span class="eyebrow">05</span><h2>Algemene klantwensen</h2><span class="chev">▾</span></button>
+    <div class="card-body">
+      <div class="field full"><label>Stijl, sfeer, kleuren, bijzondere wensen en aandachtspunten</label>
+        <textarea data-save id="w_algemeen" style="min-height:130px"></textarea></div>
+    </div>
+  </section>
+
+  <!-- 6. Controle -->
+  <section class="card" data-section>
+    <button class="card-head" type="button"><span class="eyebrow">06</span><h2>Controle voor afronden</h2><span class="chev">▾</span></button>
+    <div class="card-body">
+      <div class="check"><input type="checkbox" data-save id="c1"><label for="c1">Klantgegevens ingevuld</label></div>
+      <div class="check"><input type="checkbox" data-save id="c2"><label for="c2">Badkamergegevens ingevuld</label></div>
+      <div class="check"><input type="checkbox" data-save id="c3"><label for="c3">Tegels besproken</label></div>
+      <div class="check"><input type="checkbox" data-save id="c4"><label for="c4">Sanitair besproken</label></div>
+      <div class="check"><input type="checkbox" data-save id="c5"><label for="c5">Montage besproken</label></div>
+      <div class="check"><input type="checkbox" data-save id="c6"><label for="c6">Foto's toegevoegd</label></div>
+      <div class="check"><input type="checkbox" data-save id="c7"><label for="c7">Opmerkingen gecontroleerd</label></div>
+    </div>
+  </section>
+
+  <!-- Versturen -->
+  <section class="card" data-section>
+    <button class="card-head" type="button"><span class="eyebrow">07</span><h2>Versturen</h2><span class="chev">▾</span></button>
+    <div class="card-body">
+      <p class="hint" style="margin-top:0">De intake wordt als PDF naar de winkel gemaild. Met "PDF" download je 'm alleen.</p>
+      <div class="check" style="border-bottom:0">
+        <input type="checkbox" data-save id="mailKlant"><label for="mailKlant">Ook een kopie naar de klant sturen (naar het ingevulde e-mailadres)</label>
+      </div>
+      <button class="btn primary" id="sendBtn3" type="button" style="margin-top:8px">Versturen naar werkvoorbereiding</button>
+    </div>
+  </section>
+
+  <!-- Settings: logo -->
+  <section class="card collapsed" data-section>
+    <button class="card-head" type="button"><span class="eyebrow">Logo</span><h2>Logo voor op de PDF</h2><span class="chev">▾</span></button>
+    <div class="card-body">
+      <p class="hint" style="margin-top:0">Eenmalig instellen. Wordt bewaard op dit apparaat en bovenaan elke PDF geplaatst.</p>
+      <div class="logo-row">
+        <label class="add-photo">Logo kiezen<input type="file" accept="image/*" id="logoInput"></label>
+        <img class="logo-prev" id="logoPrev" alt="" style="display:none">
+        <button class="btn ghost" id="logoClear" type="button" style="display:none">Verwijderen</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer-note">Gegevens worden op dit apparaat bewaard. Maak de PDF om te delen of te archiveren.</div>
+</main>
+
+<div class="bottombar">
+  <div class="inner">
+    <button class="btn ghost" id="pdfBtn2" type="button">PDF</button>
+    <button class="btn primary" id="sendBtn2" type="button">Versturen</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+const KEY = "badkamer-intake-v1";
+const LOGOKEY = "badkamer-intake-logo";
+
+// ▼▼ VUL DIT IN ▼▼
+const SCRIPT_URL = "PLAK_HIER_JE_APPS_SCRIPT_URL";          // Web App URL van je Google Apps Script
+const INTERNAL_RECIPIENTS = "baderie@wbpoortvliet.nl";       // interne ontvanger(s); meerdere scheiden met een komma
+// ▲▲ VUL DIT IN ▲▲
+
+// ---- Product configuration ----
+const PRODUCTS = [
+  {key:"wandtegels", label:"Wandtegels", fields:["Voegkleur"]},
+  {key:"vloertegels", label:"Vloertegels", fields:["Voegkleur"]},
+  {key:"wastafelmeubel", label:"Wastafelmeubel", fields:["Kleur","Afmeting"]},
+  {key:"wastafel", label:"Wastafel", fields:[]},
+  {key:"spiegel", label:"Spiegel", fields:[]},
+  {key:"douche", label:"Douche", fields:["Type","Afmeting"]},
+  {key:"douchekraan", label:"Douchekraan", fields:["Kleur",{label:"Inbouw / opbouw", opts:["Inbouw","Opbouw"]}]},
+  {key:"douchegoot", label:"Douchegoot", fields:["Lengte"]},
+  {key:"toilet", label:"Toilet", fields:["Bedieningsplaat"]},
+  {key:"bad", label:"Bad", fields:["Type"]},
+  {key:"radiator", label:"Radiator", fields:["Kleur","Afmeting"]},
+  {key:"verlichting", label:"Verlichting", fields:["Type"]},
+  {key:"plafond", label:"Plafond", fields:[{label:"Type", opts:["Schilderen","Spuitwerk","Verlaagd plafond","Gipsplaat","Anders"]},"Kleur"]},
+];
+
+// ---- State (photos + dynamic lists live here; static fields live in the DOM) ----
+let state = { photos:{}, acc:[], extra:[] };
+let logoData = null;
+
+// ---- Utilities ----
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,"_"); }
+let saveTimer=null;
+function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(save,400); }
+
+function collectStatic(){
+  const o={};
+  $$("[data-save]").forEach(el=>{
+    if(el.type==="checkbox"||el.type==="radio") o[el.id]=el.checked;
+    else o[el.id]=el.value;
+  });
+  return o;
+}
+function applyStatic(o){
+  if(!o) return;
+  $$("[data-save]").forEach(el=>{
+    if(!(el.id in o)) return;
+    if(el.type==="checkbox"||el.type==="radio") el.checked=!!o[el.id];
+    else el.value=o[el.id];
+  });
+}
+function save(){
+  const data={ static:collectStatic(), photos:state.photos, acc:state.acc, extra:state.extra };
+  try{
+    localStorage.setItem(KEY, JSON.stringify(data));
+    setStatus("Opgeslagen · "+new Date().toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"}), false);
+  }catch(e){
+    setStatus("Opslag vol — maak de PDF en start een nieuwe klant", true);
+  }
+}
+function setStatus(t, warn){
+  const s=$("#status"); s.textContent=t; s.classList.toggle("warn", !!warn);
+}
+function load(){
+  let data=null;
+  try{ data=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  if(data){
+    state.photos=data.photos||{}; state.acc=data.acc||[]; state.extra=data.extra||[];
+  }
+  try{ logoData=localStorage.getItem(LOGOKEY)||null; }catch(e){}
+}
+
+// ---- Image resize ----
+function resizeImage(file, maxDim=1200, quality=0.6){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        let {width:w, height:h}=img;
+        if(w>h && w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; }
+        else if(h>=w && h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; }
+        const c=document.createElement("canvas"); c.width=w; c.height=h;
+        c.getContext("2d").drawImage(img,0,0,w,h);
+        resolve(c.toDataURL("image/jpeg",quality));
+      };
+      img.onerror=reject; img.src=reader.result;
+    };
+    reader.onerror=reject; reader.readAsDataURL(file);
+  });
+}
+
+// ---- Photo groups ----
+function renderPhotos(group){
+  const wrap=document.querySelector(`[data-photos="${group}"] .photo-grid`);
+  if(!wrap) return;
+  wrap.innerHTML="";
+  (state.photos[group]||[]).forEach((src,i)=>{
+    const d=document.createElement("div"); d.className="thumb";
+    d.innerHTML=`<img src="${src}" alt=""><button type="button" aria-label="Verwijderen">×</button>`;
+    d.querySelector("button").onclick=()=>{ state.photos[group].splice(i,1); renderPhotos(group); save(); };
+    wrap.appendChild(d);
+  });
+  const add=document.createElement("label"); add.className="add-photo";
+  add.innerHTML=`Foto toevoegen<input type="file" accept="image/*" capture="environment" multiple>`;
+  add.querySelector("input").onchange=async e=>{
+    const files=Array.from(e.target.files||[]);
+    if(!state.photos[group]) state.photos[group]=[];
+    for(const f of files){ try{ state.photos[group].push(await resizeImage(f)); }catch(err){} }
+    renderPhotos(group); save();
+  };
+  wrap.appendChild(add);
+}
+
+// ---- Products ----
+function fieldHtml(key, f){
+  const label = typeof f==="string" ? f : f.label;
+  const id = key+"_"+slug(label);
+  if(typeof f!=="string" && f.opts){
+    const opts=["<option value=''></option>"].concat(f.opts.map(o=>`<option>${o}</option>`)).join("");
+    return `<div class="field"><label>${label}</label><select data-save id="${id}">${opts}</select></div>`;
+  }
+  return `<div class="field"><label>${label}</label><input type="text" data-save id="${id}"></div>`;
+}
+function renderProducts(){
+  const list=$("#productList"); list.innerHTML="";
+  PRODUCTS.forEach(p=>{
+    const el=document.createElement("div"); el.className="product"; el.dataset.key=p.key;
+    const extra = p.fields.map(f=>fieldHtml(p.key,f)).join("");
+    el.innerHTML=`
+      <div class="product-head">
+        <span class="dot"></span><span class="p-name">${p.label}</span>
+        <span class="switch"><span class="lbl">Gekozen</span>
+          <input type="checkbox" data-save id="gekozen_${p.key}" aria-label="${p.label} gekozen">
+          <span class="track"><span class="thumb"></span></span>
+        </span>
+      </div>
+      <div class="product-body">
+        <div class="grid">
+          <div class="field"><label>Productnaam</label><input type="text" data-save id="${p.key}_productnaam"></div>
+          ${extra}
+        </div>
+        <div class="grid one" style="margin-top:12px">
+          <div class="field full"><label>Opmerkingen</label><textarea data-save id="${p.key}_opm"></textarea></div>
+        </div>
+        <div class="photos" data-photos="prod_${p.key}"><label>Showroomfoto's</label><div class="photo-grid"></div></div>
+      </div>`;
+    list.appendChild(el);
+    const toggle=el.querySelector(`#gekozen_${p.key}`);
+    const sync=()=>el.classList.toggle("on", toggle.checked);
+    toggle.addEventListener("change", sync);
+    el.querySelector(".product-head").addEventListener("click", ev=>{
+      if(ev.target.closest(".switch")) return;
+      toggle.checked=!toggle.checked; toggle.dispatchEvent(new Event("change")); scheduleSave();
+    });
+  });
+}
+
+// ---- Accessoires ----
+function renderAcc(){
+  const list=$("#accList"); list.innerHTML="";
+  state.acc.forEach((a,i)=>{
+    const el=document.createElement("div"); el.className="product on removable"; 
+    el.innerHTML=`
+      <div class="product-body" style="display:block; border-top:0; padding-top:14px">
+        <button class="rm" type="button">Verwijderen</button>
+        <div class="grid">
+          <div class="field"><label>Accessoire</label><input type="text" value="${escapeAttr(a.naam)}" data-acc="${i}" data-k="naam"></div>
+          <div class="field"><label>Productnaam</label><input type="text" value="${escapeAttr(a.productnaam)}" data-acc="${i}" data-k="productnaam"></div>
+          <div class="field full"><label>Opmerking</label><textarea data-acc="${i}" data-k="opm">${escapeHtml(a.opm)}</textarea></div>
+        </div>
+        <div class="photos" data-photos="acc_${i}"><label>Foto's</label><div class="photo-grid"></div></div>
+      </div>`;
+    el.querySelector(".rm").onclick=()=>{ removeDyn("acc", i); renderAcc(); save(); };
+    list.appendChild(el);
+    renderPhotos("acc_"+i);
+  });
+  bindDyn("acc");
+}
+// ---- Extra ----
+function renderExtra(){
+  const list=$("#extraList"); list.innerHTML="";
+  state.extra.forEach((a,i)=>{
+    const el=document.createElement("div"); el.className="product on removable";
+    el.innerHTML=`
+      <div class="product-body" style="display:block; border-top:0; padding-top:14px">
+        <button class="rm" type="button">Verwijderen</button>
+        <div class="grid">
+          <div class="field"><label>Onderdeel</label><input type="text" value="${escapeAttr(a.naam)}" data-extra="${i}" data-k="naam"></div>
+          <div class="field"><label>Productnaam</label><input type="text" value="${escapeAttr(a.productnaam)}" data-extra="${i}" data-k="productnaam"></div>
+          <div class="field full"><label>Opmerkingen</label><textarea data-extra="${i}" data-k="opm">${escapeHtml(a.opm)}</textarea></div>
+        </div>
+        <div class="photos" data-photos="extra_${i}"><label>Foto's</label><div class="photo-grid"></div></div>
+      </div>`;
+    el.querySelector(".rm").onclick=()=>{ removeDyn("extra", i); renderExtra(); save(); };
+    list.appendChild(el);
+    renderPhotos("extra_"+i);
+  });
+  bindDyn("extra");
+}
+function bindDyn(kind){
+  $$(`[data-${kind}]`).forEach(el=>{
+    el.oninput=()=>{ const i=+el.dataset[kind]; state[kind][i][el.dataset.k]=el.value; scheduleSave(); };
+  });
+}
+function removeDyn(kind, i){
+  const prefix = kind+"_";
+  const len = state[kind].length;
+  // drop removed item's photos, then shift the rest down one index
+  delete state.photos[prefix+i];
+  for(let j=i+1;j<len;j++){
+    if(state.photos[prefix+j]!==undefined){ state.photos[prefix+(j-1)]=state.photos[prefix+j]; delete state.photos[prefix+j]; }
+    else { delete state.photos[prefix+(j-1)]; }
+  }
+  state[kind].splice(i,1);
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function escapeAttr(s){ return (s||"").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+
+// ---- Logo ----
+function renderLogo(){
+  const prev=$("#logoPrev"), clr=$("#logoClear");
+  if(logoData){ prev.src=logoData; prev.style.display="block"; clr.style.display="inline-flex"; }
+  else{ prev.style.display="none"; clr.style.display="none"; }
+}
+$("#logoInput").onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  logoData=await resizeImage(f, 400, 0.85);
+  try{ localStorage.setItem(LOGOKEY, logoData); }catch(err){}
+  renderLogo();
+};
+$("#logoClear").onclick=()=>{ logoData=null; try{localStorage.removeItem(LOGOKEY);}catch(e){} renderLogo(); };
+
+// ---- Montage conditional ----
+function syncMontage(){
+  const ja=$("#m_ja").checked;
+  $("#montageBody").hidden=!ja;
+}
+
+// ---- Collapsible sections ----
+function bindCollapse(){
+  $$("[data-section] .card-head").forEach(h=>{
+    h.addEventListener("click", ()=> h.parentElement.classList.toggle("collapsed"));
+  });
+}
+
+// ---- New client ----
+function newClient(){
+  if(!confirm("Nieuwe klant starten? De huidige intake wordt gewist. Maak eerst de PDF als je die wilt bewaren.")) return;
+  state={ photos:{}, acc:[], extra:[] };
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  $$("[data-save]").forEach(el=>{ if(el.type==="checkbox"||el.type==="radio") el.checked=false; else el.value=""; });
+  const today=new Date().toISOString().slice(0,10); $("#k_datum").value=today;
+  renderProducts(); renderAcc(); renderExtra();
+  $$("[data-photos]").forEach(p=>renderPhotos(p.dataset.photos));
+  syncMontage(); save();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+// ---- PDF ----
+function loadImg(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>res(null); i.src=src; }); }
+
+async function buildPdfDoc(){
+  const { jsPDF }=window.jspdf;
+  const doc=new jsPDF({unit:"pt", format:"a4"});
+  const PW=doc.internal.pageSize.getWidth(), PH=doc.internal.pageSize.getHeight();
+  const M=40; let y=M;
+  const ACCENT=[15,110,107], INK=[23,36,43], MUT=[95,112,120], LINE=[221,228,231];
+
+  function ensure(h){ if(y+h>PH-M){ doc.addPage(); y=M; } }
+  function heading(t){
+    ensure(46); y+=8;
+    doc.setDrawColor(...LINE); doc.setLineWidth(.8); doc.line(M,y,PW-M,y); y+=18;
+    doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(...ACCENT);
+    doc.text(t.toUpperCase(), M, y); y+=16;
+    doc.setTextColor(...INK);
+  }
+  function kv(label,val){
+    if(val===undefined||val===null||val==="") return;
+    doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(...MUT);
+    const lblW=130;
+    const valLines=doc.splitTextToSize(String(val), PW-M-M-lblW);
+    ensure(valLines.length*13+4);
+    doc.text(label, M, y);
+    doc.setFont("helvetica","normal"); doc.setFontSize(10.5); doc.setTextColor(...INK);
+    doc.text(valLines, M+lblW, y);
+    y+=valLines.length*13+3;
+  }
+  function para(val){
+    if(!val) return;
+    doc.setFont("helvetica","normal"); doc.setFontSize(10.5); doc.setTextColor(...INK);
+    const lines=doc.splitTextToSize(String(val), PW-M-M);
+    ensure(lines.length*13+4); doc.text(lines,M,y); y+=lines.length*13+4;
+  }
+  function subhead(t){
+    ensure(20); doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.setTextColor(...INK);
+    doc.text(t,M,y); y+=15;
+  }
+  async function photoRow(keys){
+    let imgs=[];
+    for(const k of keys){ for(const src of (state.photos[k]||[])) imgs.push(src); }
+    if(!imgs.length) return;
+    const gap=10, cols=2, cw=(PW-M-M-gap)/cols;
+    for(let i=0;i<imgs.length;i+=cols){
+      let rowH=0, cells=[];
+      for(let c=0;c<cols && i+c<imgs.length;c++){
+        const im=await loadImg(imgs[i+c]); if(!im) continue;
+        const ch=cw*(im.height/im.width); cells.push({im,ch}); rowH=Math.max(rowH,ch);
+      }
+      ensure(rowH+gap);
+      cells.forEach((cell,c)=>{
+        try{ doc.addImage(cell.im, "JPEG", M+c*(cw+gap), y, cw, cell.ch); }catch(e){}
+      });
+      y+=rowH+gap;
+    }
+  }
+  const V=id=>{ const el=document.getElementById(id); return el?el.value:""; };
+  const CH=id=>{ const el=document.getElementById(id); return el?el.checked:false; };
+
+  // Header / logo
+  if(logoData){ const li=await loadImg(logoData); if(li){ const lw=Math.min(150, li.width); const lh=lw*(li.height/li.width); doc.addImage(li,"JPEG",M,y,lw,lh); y+=lh+8; } }
+  doc.setFont("helvetica","bold"); doc.setFontSize(20); doc.setTextColor(...INK);
+  doc.text("Intakeverslag badkamer", M, y+6); y+=26;
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...MUT);
+  doc.text(`Datum intake: ${V("k_datum")||"—"}    Verkoper: ${V("k_verkoper")||"—"}`, M, y); y+=6;
+
+  heading("Klantgegevens");
+  kv("Naam", V("k_naam")); kv("Telefoon", V("k_tel")); kv("E-mail", V("k_email"));
+  kv("Adres", V("k_adres")); kv("Postcode", V("k_postcode")); kv("Woonplaats", V("k_plaats"));
+
+  heading("Badkamergegevens");
+  const dims=[V("b_lengte"),V("b_breedte"),V("b_hoogte")].filter(Boolean);
+  if(dims.length) kv("Afmetingen (cm)", `L ${V("b_lengte")||"—"} × B ${V("b_breedte")||"—"} × H ${V("b_hoogte")||"—"}`);
+  if(V("b_huidig")){ subhead("Huidige situatie"); para(V("b_huidig")); }
+  if(V("b_wensen")){ subhead("Wensen klant"); para(V("b_wensen")); }
+  if(V("b_bijzonder")){ subhead("Bijzonderheden"); para(V("b_bijzonder")); }
+  await photoRow(["badkamer"]);
+
+  // Products
+  const chosen=PRODUCTS.filter(p=>CH("gekozen_"+p.key));
+  if(chosen.length){
+    heading("Gekozen producten");
+    for(const p of chosen){
+      subhead(p.label);
+      kv("Productnaam", V(p.key+"_productnaam"));
+      p.fields.forEach(f=>{ const label=typeof f==="string"?f:f.label; kv(label, V(p.key+"_"+slug(label))); });
+      kv("Opmerkingen", V(p.key+"_opm"));
+      await photoRow(["prod_"+p.key]);
+      y+=4;
+    }
+  }
+  // Accessoires
+  if(state.acc.some(a=>a.naam||a.productnaam)){
+    heading("Accessoires");
+    for(let i=0;i<state.acc.length;i++){ const a=state.acc[i]; if(!(a.naam||a.productnaam||a.opm)) continue;
+      subhead(a.naam||"Accessoire"); kv("Productnaam", a.productnaam); kv("Opmerking", a.opm); await photoRow(["acc_"+i]); y+=4; }
+  }
+  // Extra
+  if(state.extra.some(a=>a.naam||a.productnaam)){
+    heading("Extra onderdelen");
+    for(let i=0;i<state.extra.length;i++){ const a=state.extra[i]; if(!(a.naam||a.productnaam||a.opm)) continue;
+      subhead(a.naam||"Onderdeel"); kv("Productnaam", a.productnaam); kv("Opmerkingen", a.opm); await photoRow(["extra_"+i]); y+=4; }
+  }
+
+  // Montage
+  heading("Montage");
+  const montage = CH("m_ja") ? "Ja — door onze winkel" : (CH("m_nee") ? "Nee" : "—");
+  kv("Montage door winkel", montage);
+  if(CH("m_ja")){
+    subhead("Woninggegevens");
+    kv("Bouwjaar", V("m_bouwjaar")); kv("Bouw", V("m_bouwtype")); kv("Type woning", V("m_woningtype"));
+    subhead("Bereikbaarheid");
+    kv("Etage", V("m_etage")); kv("Lift", V("m_lift")); kv("Bijzonderheden", V("m_bereik_opm"));
+    subhead("Bestaande badkamer");
+    kv("Wordt verwijderd", V("m_verwijderd")); kv("Sloop door", V("m_sloop"));
+    subhead("Technische gegevens");
+    kv("Type wanden", V("m_wanden")); kv("Type vloer", V("m_vloer")); kv("Opmerkingen", V("m_tech_opm"));
+    subhead("Randafwerking");
+    kv("Type", V("m_rand_type")); kv("Kleur / materiaal", V("m_rand_kleur")); kv("Opmerkingen", V("m_rand_opm"));
+    subhead("Installatie");
+    kv("Aansluitingen geschikt", V("m_aansluiting")); kv("Leidingaanpassingen nodig", V("m_leiding")); kv("Opmerkingen", V("m_inst_opm"));
+    await photoRow(["montage"]);
+  }
+
+  // Wensen
+  if(V("w_algemeen")){ heading("Algemene klantwensen"); para(V("w_algemeen")); }
+
+  // Footer page numbers
+  const pages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pages;i++){ doc.setPage(i); doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...MUT);
+    doc.text(`Intakeverslag${V("k_naam")?" — "+V("k_naam"):""}`, M, PH-20);
+    doc.text(`${i} / ${pages}`, PW-M, PH-20, {align:"right"}); }
+
+  const naam=(V("k_naam")||"klant").replace(/[^a-z0-9]+/gi,"_");
+  doc.setProperties({ title:"Intakeverslag badkamer" });
+  return doc;
+}
+function pdfFilename(){ const n=(document.getElementById("k_naam").value||"klant").replace(/[^a-z0-9]+/gi,"_"); return `Intake_${n}.pdf`; }
+
+async function makePDF(){
+  setStatus("PDF maken…", false);
+  let doc; try{ doc=await buildPdfDoc(); }catch(e){ setStatus("PDF maken mislukt", true); return; }
+  doc.save(pdfFilename());
+  setStatus("PDF gemaakt", false);
+}
+
+async function sendPDF(){
+  if(!SCRIPT_URL || /PLAK_HIER/.test(SCRIPT_URL)){
+    alert("De verzendlink is nog niet ingesteld. Vul bovenaan het bestand SCRIPT_URL in met de URL van je Google Apps Script.");
+    return;
+  }
+  const V=id=>{ const el=document.getElementById(id); return el?el.value:""; };
+  setStatus("PDF maken…", false);
+  let doc; try{ doc=await buildPdfDoc(); }catch(e){ setStatus("PDF maken mislukt", true); return; }
+  const base64=doc.output("datauristring").split(",")[1];
+  const cc = (document.getElementById("mailKlant")||{}).checked ? V("k_email") : "";
+  const payload={
+    filename: pdfFilename(),
+    pdfBase64: base64,
+    to: INTERNAL_RECIPIENTS,
+    cc: cc,
+    subject: `Intake badkamer${V("k_naam")?" — "+V("k_naam"):""}`,
+    body: `In de bijlage het intakeverslag${V("k_naam")?" van "+V("k_naam"):""}.\n\nDatum intake: ${V("k_datum")||"—"}\nVerkoper: ${V("k_verkoper")||"—"}`
+  };
+  setStatus("Versturen…", false);
+  try{
+    await fetch(SCRIPT_URL, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) });
+    setStatus("Verstuurd — controleer de inbox", false);
+  }catch(e){
+    setStatus("Versturen mislukt — probeer opnieuw", true);
+  }
+}
+
+// ---- Wire up ----
+document.addEventListener("input", e=>{ if(e.target.closest("[data-save]")||e.target.hasAttribute("data-save")) scheduleSave(); });
+document.addEventListener("change", e=>{ if(e.target.hasAttribute("data-save")){ if(e.target.name==="montage") syncMontage(); scheduleSave(); } });
+$("#addAcc").onclick=()=>{ state.acc.push({naam:"",productnaam:"",opm:""}); renderAcc(); save(); };
+$("#addExtra").onclick=()=>{ state.extra.push({naam:"",productnaam:"",opm:""}); renderExtra(); save(); };
+$("#pdfBtn").onclick=makePDF; $("#pdfBtn2").onclick=makePDF;
+$("#sendBtn").onclick=sendPDF; $("#sendBtn2").onclick=sendPDF; $("#sendBtn3").onclick=sendPDF;
+$("#newBtn").onclick=newClient;
+
+// ---- Init ----
+(function init(){
+  load();
+  renderProducts();
+  applyStatic(collectStaticDefaults());   // ensure ids exist first
+  // apply saved static after products rendered
+  let data=null; try{ data=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  applyStatic(data&&data.static);
+  // sync product toggles visual
+  PRODUCTS.forEach(p=>{ const t=$("#gekozen_"+p.key); if(t&&t.checked) t.closest(".product").classList.add("on"); });
+  renderAcc(); renderExtra();
+  $$("[data-photos]").forEach(p=>renderPhotos(p.dataset.photos));
+  renderLogo(); bindCollapse(); syncMontage();
+  if(!$("#k_datum").value) $("#k_datum").value=new Date().toISOString().slice(0,10);
+  setStatus("Automatisch opslaan aan", false);
+})();
+function collectStaticDefaults(){ return {}; }
+</script>
+</body>
+</html>
