@@ -139,6 +139,7 @@
   .check label{font-size:15px; color:var(--ink); font-weight:500}
   /* montage hidden state */
   #montageBody[hidden]{display:none}
+  #toiletSection[hidden]{display:none}
   .logo-row{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
   .logo-prev{height:44px; max-width:160px; object-fit:contain; border:1px solid var(--line); border-radius:8px; padding:4px; background:#fff}
   /* bottom bar mobile */
@@ -194,6 +195,15 @@
         <div class="field"><label>Breedte</label><input type="number" inputmode="decimal" data-save id="b_breedte"></div>
         <div class="field"><label>Hoogte</label><input type="number" inputmode="decimal" data-save id="b_hoogte"></div>
       </div>
+      <div class="field" style="margin-top:14px"><label>Tekening aanwezig?</label>
+        <select data-save id="b_tekening"><option value=""></option><option>Ja</option><option>Nee</option></select>
+      </div>
+      <div class="field" style="margin-top:14px"><label>Gewenste indeling in ViSoft gezet?</label>
+        <select data-save id="b_visoft"><option value=""></option><option>Ja</option><option>Nee</option></select>
+      </div>
+      <div class="field" style="margin-top:14px"><label>Apart toilet ook van toepassing?</label>
+        <select data-save id="b_apart_toilet"><option value=""></option><option>Ja</option><option>Nee</option></select>
+      </div>
       <div class="grid one" style="margin-top:14px">
         <div class="field full"><label>Huidige situatie</label><textarea data-save id="b_huidig"></textarea></div>
         <div class="field full"><label>Wensen klant</label><textarea data-save id="b_wensen"></textarea></div>
@@ -221,6 +231,32 @@
       <p class="hint" style="margin-top:-6px">Voor keuzes buiten de vaste lijst (sauna, stoomcabine, nis, maatwerkkast…).</p>
       <div id="extraList"></div>
       <button class="add-row" id="addExtra" type="button">+ Extra onderdeel toevoegen</button>
+    </div>
+  </section>
+
+  <!-- 3b. Apart toilet (alleen zichtbaar bij Ja) -->
+  <section class="card" id="toiletSection" data-section hidden>
+    <button class="card-head" type="button"><span class="eyebrow">WC</span><h2>Apart toilet</h2><span class="chev">▾</span></button>
+    <div class="card-body">
+      <label style="margin-bottom:8px; display:block">Afmetingen (cm)</label>
+      <div class="dims">
+        <div class="field"><label>Lengte</label><input type="number" inputmode="decimal" data-save id="t_lengte"></div>
+        <div class="field"><label>Breedte</label><input type="number" inputmode="decimal" data-save id="t_breedte"></div>
+        <div class="field"><label>Hoogte</label><input type="number" inputmode="decimal" data-save id="t_hoogte"></div>
+      </div>
+      <div class="grid one" style="margin-top:14px">
+        <div class="field full"><label>Huidige situatie</label><textarea data-save id="t_huidig"></textarea></div>
+        <div class="field full"><label>Wensen klant</label><textarea data-save id="t_wensen"></textarea></div>
+        <div class="field full"><label>Bijzonderheden</label><textarea data-save id="t_bijzonder"></textarea></div>
+      </div>
+      <div class="photos" data-photos="toilet_ruimte">
+        <label>Foto's huidig toilet</label>
+        <div class="photo-grid"></div>
+      </div>
+
+      <div class="block-title" style="margin-top:24px">Productkeuzes toilet apart</div>
+      <p class="hint" style="margin-top:0">Zet een onderdeel aan als het besproken is. Alleen wat aanstaat komt in de PDF.</p>
+      <div id="toiletProductList"></div>
     </div>
   </section>
 
@@ -332,9 +368,6 @@
     <button class="card-head" type="button"><span class="eyebrow">07</span><h2>Versturen</h2><span class="chev">▾</span></button>
     <div class="card-body">
       <p class="hint" style="margin-top:0">De intake wordt als PDF naar de winkel gemaild. Met "PDF" download je 'm alleen.</p>
-      <div class="check" style="border-bottom:0">
-        <input type="checkbox" data-save id="mailKlant"><label for="mailKlant">Ook een kopie naar de klant sturen (naar het ingevulde e-mailadres)</label>
-      </div>
       <button class="btn primary" id="sendBtn3" type="button" style="margin-top:8px">Versturen naar werkvoorbereiding</button>
     </div>
   </section>
@@ -377,16 +410,29 @@ const PRODUCTS = [
   {key:"wandtegels", label:"Wandtegels", fields:["Voegkleur"]},
   {key:"vloertegels", label:"Vloertegels", fields:["Voegkleur"]},
   {key:"wastafelmeubel", label:"Wastafelmeubel", fields:["Kleur","Afmeting"]},
+  {key:"wastafelplug", label:"Wastafelplug", fields:["Kleur"]},
   {key:"wastafel", label:"Wastafel", fields:[]},
   {key:"spiegel", label:"Spiegel", fields:[]},
-  {key:"douche", label:"Douche", fields:["Type","Afmeting"]},
+  {key:"douche", label:"Douchedeur / cabine", fields:["Type","Afmeting"]},
   {key:"douchekraan", label:"Douchekraan", fields:["Kleur",{label:"Inbouw / opbouw", opts:["Inbouw","Opbouw"]}]},
   {key:"douchegoot", label:"Douchegoot", fields:["Lengte"]},
   {key:"toilet", label:"Toilet", fields:["Bedieningsplaat"]},
   {key:"bad", label:"Bad", fields:["Type"]},
-  {key:"radiator", label:"Radiator", fields:["Kleur","Afmeting"]},
+  {key:"radiator", label:"Radiator", fields:[{label:"Type", opts:["Elektrisch","CV"]},"Kleur","Afmeting"]},
+  {key:"vloerverwarming", label:"Vloerverwarming", fields:[{label:"Type", opts:["Elektrisch","CV / water"]}]},
   {key:"verlichting", label:"Verlichting", fields:["Type"]},
-  {key:"plafond", label:"Plafond", fields:[{label:"Type", opts:["Schilderen","Spuitwerk","Verlaagd plafond","Gipsplaat","Anders"]},"Kleur"]},
+  {key:"plafond", label:"Plafond", fields:[{label:"Type", opts:["Schilderen","Spuitwerk","Spanplafond","Stucwerk","Verlaagd plafond","Gipsplaat","Anders"]},"Kleur"]},
+];
+
+// Producten voor het aparte toilet (eigen sleutels met t_ zodat ze niet botsen met de badkamer)
+const TOILET_PRODUCTS = [
+  {key:"t_wandtegels", label:"Wandtegels", fields:["Voegkleur"]},
+  {key:"t_vloertegels", label:"Vloertegels", fields:["Voegkleur"]},
+  {key:"t_fontein", label:"Fontein", fields:[]},
+  {key:"t_fonteinkast", label:"Fonteinkast", fields:["Kleur","Afmeting"]},
+  {key:"t_drukknop", label:"Drukknop", fields:["Kleur"]},
+  {key:"t_plafond", label:"Plafond", fields:[{label:"Type", opts:["Schilderen","Spuitwerk","Spanplafond","Stucwerk","Verlaagd plafond","Gipsplaat","Anders"]},"Kleur"]},
+  {key:"t_verlichting", label:"Verlichting", fields:["Type"]},
 ];
 
 // ---- State (photos + dynamic lists live here; static fields live in the DOM) ----
@@ -489,9 +535,9 @@ function fieldHtml(key, f){
   }
   return `<div class="field"><label>${label}</label><input type="text" data-save id="${id}"></div>`;
 }
-function renderProducts(){
-  const list=$("#productList"); list.innerHTML="";
-  PRODUCTS.forEach(p=>{
+function renderProductList(listId, products){
+  const list=$("#"+listId); if(!list) return; list.innerHTML="";
+  products.forEach(p=>{
     const el=document.createElement("div"); el.className="product"; el.dataset.key=p.key;
     const extra = p.fields.map(f=>fieldHtml(p.key,f)).join("");
     el.innerHTML=`
@@ -521,6 +567,10 @@ function renderProducts(){
       toggle.checked=!toggle.checked; toggle.dispatchEvent(new Event("change")); scheduleSave();
     });
   });
+}
+function renderProducts(){
+  renderProductList("productList", PRODUCTS);
+  renderProductList("toiletProductList", TOILET_PRODUCTS);
 }
 
 // ---- Accessoires ----
@@ -603,6 +653,10 @@ function syncMontage(){
   const ja=$("#m_ja").checked;
   $("#montageBody").hidden=!ja;
 }
+function syncToilet(){
+  const sec=$("#toiletSection"); if(!sec) return;
+  sec.hidden = $("#b_apart_toilet").value!=="Ja";
+}
 
 // ---- Collapsible sections ----
 function bindCollapse(){
@@ -620,7 +674,7 @@ function newClient(){
   const today=new Date().toISOString().slice(0,10); $("#k_datum").value=today;
   renderProducts(); renderAcc(); renderExtra();
   $$("[data-photos]").forEach(p=>renderPhotos(p.dataset.photos));
-  syncMontage(); save();
+  syncMontage(); syncToilet(); save();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -698,6 +752,8 @@ async function buildPdfDoc(){
   heading("Badkamergegevens");
   const dims=[V("b_lengte"),V("b_breedte"),V("b_hoogte")].filter(Boolean);
   if(dims.length) kv("Afmetingen (cm)", `L ${V("b_lengte")||"—"} × B ${V("b_breedte")||"—"} × H ${V("b_hoogte")||"—"}`);
+  if(V("b_tekening")) kv("Tekening aanwezig", V("b_tekening"));
+  if(V("b_visoft")) kv("Gewenste indeling in ViSoft gezet", V("b_visoft"));
   if(V("b_huidig")){ subhead("Huidige situatie"); para(V("b_huidig")); }
   if(V("b_wensen")){ subhead("Wensen klant"); para(V("b_wensen")); }
   if(V("b_bijzonder")){ subhead("Bijzonderheden"); para(V("b_bijzonder")); }
@@ -727,6 +783,29 @@ async function buildPdfDoc(){
     heading("Extra onderdelen");
     for(let i=0;i<state.extra.length;i++){ const a=state.extra[i]; if(!(a.naam||a.productnaam||a.opm)) continue;
       subhead(a.naam||"Onderdeel"); kv("Productnaam", a.productnaam); kv("Opmerkingen", a.opm); await photoRow(["extra_"+i]); y+=4; }
+  }
+
+  // Apart toilet
+  if(V("b_apart_toilet")==="Ja"){
+    heading("Apart toilet");
+    const tdims=[V("t_lengte"),V("t_breedte"),V("t_hoogte")].filter(Boolean);
+    if(tdims.length) kv("Afmetingen (cm)", `L ${V("t_lengte")||"—"} × B ${V("t_breedte")||"—"} × H ${V("t_hoogte")||"—"}`);
+    if(V("t_huidig")){ subhead("Huidige situatie"); para(V("t_huidig")); }
+    if(V("t_wensen")){ subhead("Wensen klant"); para(V("t_wensen")); }
+    if(V("t_bijzonder")){ subhead("Bijzonderheden"); para(V("t_bijzonder")); }
+    await photoRow(["toilet_ruimte"]);
+    const tchosen=TOILET_PRODUCTS.filter(p=>CH("gekozen_"+p.key));
+    if(tchosen.length){
+      subhead("Productkeuzes toilet apart");
+      for(const p of tchosen){
+        subhead(p.label);
+        kv("Productnaam", V(p.key+"_productnaam"));
+        p.fields.forEach(f=>{ const label=typeof f==="string"?f:f.label; kv(label, V(p.key+"_"+slug(label))); });
+        kv("Opmerkingen", V(p.key+"_opm"));
+        await photoRow(["prod_"+p.key]);
+        y+=4;
+      }
+    }
   }
 
   // Montage
@@ -780,12 +859,10 @@ async function sendPDF(){
   setStatus("PDF maken…", false);
   let doc; try{ doc=await buildPdfDoc(); }catch(e){ setStatus("PDF maken mislukt", true); return; }
   const base64=doc.output("datauristring").split(",")[1];
-  const cc = (document.getElementById("mailKlant")||{}).checked ? V("k_email") : "";
   const payload={
     filename: pdfFilename(),
     pdfBase64: base64,
     to: INTERNAL_RECIPIENTS,
-    cc: cc,
     subject: `Intake badkamer${V("k_naam")?" — "+V("k_naam"):""}`,
     body: `In de bijlage het intakeverslag${V("k_naam")?" van "+V("k_naam"):""}.\n\nDatum intake: ${V("k_datum")||"—"}\nVerkoper: ${V("k_verkoper")||"—"}`
   };
@@ -800,7 +877,7 @@ async function sendPDF(){
 
 // ---- Wire up ----
 document.addEventListener("input", e=>{ if(e.target.closest("[data-save]")||e.target.hasAttribute("data-save")) scheduleSave(); });
-document.addEventListener("change", e=>{ if(e.target.hasAttribute("data-save")){ if(e.target.name==="montage") syncMontage(); scheduleSave(); } });
+document.addEventListener("change", e=>{ if(e.target.hasAttribute("data-save")){ if(e.target.name==="montage") syncMontage(); if(e.target.id==="b_apart_toilet") syncToilet(); scheduleSave(); } });
 $("#addAcc").onclick=()=>{ state.acc.push({naam:"",productnaam:"",opm:""}); renderAcc(); save(); };
 $("#addExtra").onclick=()=>{ state.extra.push({naam:"",productnaam:"",opm:""}); renderExtra(); save(); };
 $("#pdfBtn").onclick=makePDF; $("#pdfBtn2").onclick=makePDF;
@@ -816,10 +893,10 @@ $("#newBtn").onclick=newClient;
   let data=null; try{ data=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
   applyStatic(data&&data.static);
   // sync product toggles visual
-  PRODUCTS.forEach(p=>{ const t=$("#gekozen_"+p.key); if(t&&t.checked) t.closest(".product").classList.add("on"); });
+  [...PRODUCTS, ...TOILET_PRODUCTS].forEach(p=>{ const t=$("#gekozen_"+p.key); if(t&&t.checked) t.closest(".product").classList.add("on"); });
   renderAcc(); renderExtra();
   $$("[data-photos]").forEach(p=>renderPhotos(p.dataset.photos));
-  renderLogo(); bindCollapse(); syncMontage();
+  renderLogo(); bindCollapse(); syncMontage(); syncToilet();
   if(!$("#k_datum").value) $("#k_datum").value=new Date().toISOString().slice(0,10);
   setStatus("Automatisch opslaan aan", false);
 })();
